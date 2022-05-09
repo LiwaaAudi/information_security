@@ -1,10 +1,15 @@
 certifi==2021.10.8
 charset-normalizer==2.0.12
 idna==3.3
+mpmath==1.2.1
 Naked==0.1.31
 Padding==0.5
+pyasn1==0.4.8
 pycrypto==2.6.1
+pycryptodomex==3.14.1
 PyYAML==6.0
 requests==2.27.1
+rsa==4.8
 shellescape==3.8.1
+sympy==1.10.1
 urllib3==1.26.9
