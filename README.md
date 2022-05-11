@@ -3,6 +3,7 @@
 ## [task 1](vigenere_cipher.py)
 ## [task 2](aes_cipher.py)
 ## [task 3](RSA)
+## [task 4](password_manager)
 
 ### How to run?
 1. Make sure you have python installed
