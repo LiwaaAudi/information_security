@@ -3,6 +3,9 @@ import os
 import hashlib
 from cryptography.fernet import Fernet
 import warnings
+from art import *
+import ast
+import pyperclip
 
 
 class PasswordManager:
@@ -56,7 +59,9 @@ class PasswordManager:
                 print('Login successful!')
                 self.logged_in = True
                 self.username = username
-                self.uuid = self.users_data[self.users_data['username'] == username]['uuid'].values[0]
+                uuid = self.users_data[self.users_data['username'] == username]['uuid'].values[0]
+                self.uuid = _parse_bytes(uuid)
+
 
         else:
             print('Login failed!')
@@ -87,7 +92,7 @@ class PasswordManager:
             {
                 'uuid': uuid,
                 'site': website,
-                'username': username,
+                'user': username,
                 'password': encrypted,
             },
             ignore_index=True)
@@ -103,11 +108,54 @@ class PasswordManager:
         if self.logged_in:
             df = self.passwords.loc[self.passwords['uuid'] == self.uuid]
             df['password'] = df['password'].apply(lambda x: Fernet(self.uuid).decrypt(x.encode()).decode())
-            print(df[['site', 'username', 'password']])
+            df_hashed = df.copy()
+            df_hashed['password'] = '**********'
+            print(df_hashed[['site', 'user', 'password']])
+            c = input('Do you want to see hashed passwords? (y/n): ')
+            if c == 'y':
+                print('================ View All Passwords ==================')
+                print(df[['site', 'user', 'password']])
             return register(self)
         else:
             print('You must be logged in to view passwords!')
             return self.login()
+
+    def view_site_password(self):
+        """
+        View password by site
+        :return: None
+        """
+        print('================ View Password by Site ==================')
+        if self.logged_in:
+            site = input('Enter website: ')
+            df = self.passwords.loc[(self.passwords['site'] == site) & (self.passwords['uuid'] == self.uuid)]
+            df['password'] = df['password'].apply(lambda x: Fernet(self.uuid).decrypt(x.encode()).decode())
+            df_hashed = df.copy()
+            df_hashed['password'] = '**********'
+            print(df_hashed[['site', 'user', 'password']])
+            c = input('Do you want to see hashed passwords? (y/n): ')
+            if c == 'y':
+                print(df[['site', 'user', 'password']])
+                cop = input('Do you want to copy the password to clipboard? (y/n): ')
+                if cop == 'y':
+                    print('================ View Password by Site ==================')
+                    pyperclip.copy(df['password'].values[0])
+
+            return register(self)
+        else:
+            print('You must be logged in to view passwords!')
+            return self.login()
+
+
+def _parse_bytes(field):
+    """Convert string represented in Python byte-string literal b'' syntax into
+    a decoded character string - otherwise return it unchanged.
+    """
+    result = field
+    try:
+        result = ast.literal_eval(field)
+    finally:
+        return result.decode() if isinstance(result, bytes) else result
 
 
 def create_csv():
@@ -127,8 +175,12 @@ def create_csv():
 
 
 def home():
+    a = text2art('L . A',
+                 font='block',
+                 chr_ignore=False,
+                 )
+    print(a)
     print("""
-    Welcome to the password manager
     1. Register
     2. Login
     3. Exit
@@ -136,13 +188,13 @@ def home():
 
 
 def register(pm):
-    choice = input('Enter your choice: ')
     print("""
     1. Add new password
     2. View passwords
     3. View site password
     4. Exit
     """)
+    choice = input('Enter your choice: ')
     if choice == '1':
         return pm.add_password()
     elif choice == '2':
@@ -172,7 +224,9 @@ def mainMenu(pm, choice):
 
 
 def main():
-    warnings.simplefilter(action='ignore', category=FutureWarning)
+    tprint('Password Manager')
+    warnings.simplefilter(action='ignore')
+
     create_csv()
     pm = PasswordManager()
     home()
