@@ -6,6 +6,8 @@ import warnings
 from art import *
 import ast
 import pyperclip
+import random
+import string
 
 
 class PasswordManager:
@@ -62,7 +64,6 @@ class PasswordManager:
                 uuid = self.users_data[self.users_data['username'] == username]['uuid'].values[0]
                 self.uuid = _parse_bytes(uuid)
 
-
         else:
             print('Login failed!')
             print('''
@@ -85,7 +86,12 @@ class PasswordManager:
         print('================ Add New Password ==================')
         website = input('Enter website: ')
         username = input('Enter username or email: ')
-        pwd = input('Enter password: ')
+        rando = input('Do you want to generate a random password? (y/n): ')
+        if rando == 'y':
+            length = int(input('Enter length of password: '))
+            pwd = generate_random(length)
+        else:
+            pwd = input('Enter password: ')
         uuid = self.uuid
         encrypted = Fernet(uuid).encrypt(pwd.encode()).decode()
         self.passwords = self.passwords.append(
@@ -146,6 +152,65 @@ class PasswordManager:
             print('You must be logged in to view passwords!')
             return self.login()
 
+    def update_password(self):
+        """
+        Update password
+        :return: None
+        """
+        print('================ Update Password ==================')
+        site = input('Enter website: ')
+        df = self.passwords.loc[(self.passwords['site'] == site) & (self.passwords['uuid'] == self.uuid)]
+        u = df['user'].values[0]
+        p = df['password'].values[0]
+        df['password'] = df['password'].apply(lambda x: Fernet(self.uuid).decrypt(x.encode()).decode())
+        df_hashed = df.copy()
+        df_hashed['password'] = '**********'
+        print(df_hashed[['site', 'user', 'password']])
+        user = input('Enter username or email: ')
+        password = input('Enter new password: ')
+        encrypted = Fernet(self.uuid).encrypt(password.encode()).decode()
+        self.passwords.loc[self.passwords['password'] == p, 'password'] = encrypted
+        self.passwords.loc[self.passwords['user'] == u, 'user'] = user
+        self.passwords.to_csv('passwords.csv', index=False)
+        print('Password updated!')
+        df1 = self.passwords.loc[(self.passwords['site'] == site) & (self.passwords['uuid'] == self.uuid)]
+        df1['password'] = df1['password'].apply(lambda x: Fernet(self.uuid).decrypt(x.encode()).decode())
+        print(df1[['site', 'user', 'password']])
+        return register(self)
+
+    def delete_password(self):
+        """
+        Delete password
+        :return: None
+        """
+        print('================ Delete Password ==================')
+
+        site = input('Enter website: ')
+        df = self.passwords.loc[(self.passwords['site'] == site) & (self.passwords['uuid'] == self.uuid)]
+        df['password'] = df['password'].apply(lambda x: Fernet(self.uuid).decrypt(x.encode()).decode())
+        df_hashed = df.copy()
+        df_hashed['password'] = '**********'
+        print(df_hashed[['site', 'user', 'password']])
+        c = input('Do you want to delete this password? (y/n): ')
+        if c == 'y':
+            self.passwords = self.passwords.drop(self.passwords[(self.passwords['site'] == site) & (self.passwords['uuid'] == self.uuid)].index)
+            self.passwords.to_csv('passwords.csv', index=False)
+            print('Password deleted!')
+            return register(self)
+        print('Password not deleted!')
+        return self.view_passwords()
+
+
+def generate_random(length):
+    """
+    Generate random string
+    :param length: length of string
+    :return: password
+    """
+    password = ''.join(random.choice(string.printable) for i in range(length))
+    print("Random password is:", password)
+    return password
+
 
 def _parse_bytes(field):
     """Convert string represented in Python byte-string literal b'' syntax into
@@ -192,7 +257,9 @@ def register(pm):
     1. Add new password
     2. View passwords
     3. View site password
-    4. Exit
+    4. Update password
+    5. Delete password
+    6. Exit
     """)
     choice = input('Enter your choice: ')
     if choice == '1':
@@ -202,6 +269,10 @@ def register(pm):
     elif choice == '3':
         return pm.view_site_password()
     elif choice == '4':
+        return pm.update_password()
+    elif choice == '5':
+        return pm.delete_password()
+    elif choice == '6':
         return exit()
     else:
         return register(pm)
